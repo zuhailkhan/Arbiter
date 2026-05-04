@@ -33,4 +33,40 @@ export async function* getIterableStream(
   }
 }
 
+// Parses Ollama NDJSON stream and yields plain text tokens.
+// Each Ollama chunk: {"model":"...","response":"token","done":false}
+export async function* parseOllamaNDJSON(
+  raw: AsyncIterable<string>
+): AsyncGenerator<string> {
+  for await (const chunk of raw) {
+    for (const line of chunk.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const data = JSON.parse(line);
+        if (data.response && !data.done) yield data.response as string;
+      } catch {
+        // partial chunk — skip
+      }
+    }
+  }
+}
+
+// Parses llama.cpp SSE stream and yields plain text tokens.
+// Each llama.cpp SSE line: data: {"content":"token","stop":false}
+export async function* parseLlamaCppSSE(
+  raw: AsyncIterable<string>
+): AsyncGenerator<string> {
+  for await (const chunk of raw) {
+    for (const line of chunk.split('\n')) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const data = JSON.parse(line.slice(6));
+        if (data.content && !data.stop) yield data.content as string;
+      } catch {
+        // partial chunk — skip
+      }
+    }
+  }
+}
+
 export default generateStream;

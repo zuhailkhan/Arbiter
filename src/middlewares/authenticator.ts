@@ -1,48 +1,35 @@
-import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import Logging from '../library/Logging';
+
 const authenticator = (req: Request, res: Response, next: NextFunction) => {
-    const token = req.cookies.accessToken;
-    
-    if(!token) {
-        return res.status(401).json({
-            message: 'Unauthorized'
-        })
+    const accessToken = req.cookies.accessToken;
+
+    if (!accessToken) {
+        return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    try {
-        jwt.verify(token as string, process.env.ACCESS_SECRET as string, (err, user) => {
-            if(user){
-                Logging.info('User Validated')
-                next()
+    jwt.verify(accessToken as string, process.env.ACCESS_SECRET as string, (err, user) => {
+        if (user) {
+            Logging.info('User Validated');
+            return next();
+        }
+
+        // Access token invalid — fall back to refresh token
+        const { refreshToken } = req.cookies;
+        if (!refreshToken) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        jwt.verify(refreshToken as string, process.env.REFRESH_SECRET as string, (refreshErr, refreshUser) => {
+            if (refreshErr || !refreshUser) {
+                Logging.error('Refresh Token Invalid');
+                return res.status(403).json({ message: 'Invalid Refresh Token' });
             }
-            if(err) {
-                const { refreshToken } = req.cookies;
-                if(!refreshToken) {
-                    return res.status(403).json({
-                        message: 'Unauthorized'
-                    })
-                }
-                jwt.verify(refreshToken as string, process.env.REFRESH_SECRET as string, (err, user) => {
-                    if(err) {
-                        Logging.error(err)
-                        return res.status(403).json({
-                            message: 'Invalid Refresh Token'
-                        })
-                    }
+            Logging.info('User Validated via Refresh Token');
+            return next();
+        });
+    });
+};
 
-                    // if(user) {
-                    //    return res.redirect('/refresh')
-                    // } 
-                })
-                next()
-            }
-        })
-    }
-    catch(err: Error | any) {
-        Logging.error(err.message)
-        next()
-    }
-}
-
-export default authenticator
+export default authenticator;

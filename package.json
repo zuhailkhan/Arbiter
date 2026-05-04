@@ -1,7 +1,7 @@
 {
-  "name": "imgbackend",
-  "version": "1.0.0",
-  "description": "backend for an arbitrary frontend project.",
+  "name": "arbiter",
+  "version": "0.1.0",
+  "description": "Streaming-aware AI moderation proxy. Supports OpenAI, Ollama, and llama.cpp.",
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev src/index.ts",
@@ -11,7 +11,6 @@
   "author": "zuhailkhan",
   "license": "ISC",
   "dependencies": {
-    "@types/mongoose": "^5.11.97",
     "axios": "^1.7.2",
     "bcrypt": "^5.1.0",
     "chalk": "^4.1.2",
@@ -33,6 +32,7 @@
     "@types/express": "^4.17.17",
     "@types/jsonwebtoken": "^9.0.1",
     "@types/node": "^18.14.4",
-    "ts-node-dev": "^2.0.0"
+    "ts-node-dev": "^2.0.0",
+    "@types/mongoose": "^5.11.97"
   }
 }

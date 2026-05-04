@@ -1,56 +1,55 @@
-import express, { Application, Request, Response } from "express";
-import bodyParser from 'body-parser'
-import cors, { CorsOptions } from 'cors'
-import { dbconnect } from "./config/db.connect";
-import Logging from "./library/Logging";
-import UserRoute from "./routes/UserRoute";
-import ChatRoute from "./routes/ChatRoute";
-import authenticator from "./middlewares/authenticator";
-import cookieParser from 'cookie-parser'
+import express, { Application, Request, Response } from 'express';
+import cors, { CorsOptions } from 'cors';
+import { dbconnect } from './config/db.connect';
+import Logging from './library/Logging';
+import UserRoute from './routes/UserRoute';
+import ChatRoute from './routes/ChatRoute';
+import authenticator from './middlewares/authenticator';
+import cookieParser from 'cookie-parser';
+import './config/config';  // validates required env vars at startup
 
 const app: Application = express();
 
 const corsOptions: CorsOptions = {
-    origin: ['http://localhost:8014'],
+    origin: [process.env.CLIENT_ORIGIN ?? 'http://localhost:8014'],
     methods: 'GET,POST',
     preflightContinue: false,
     optionsSuccessStatus: 204,
     credentials: true,
-}
+};
+
 app.use(cors(corsOptions));
-app.use(bodyParser.json());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use('/User', UserRoute)
-app.use('/Chat', ChatRoute)
+
+app.use((req, res, next) => {
+    Logging.info(`${req.method} ${req.url} — ${req.socket.remoteAddress}`);
+    res.on('finish', () => {
+        Logging.info(`${req.method} ${req.url} — ${res.statusCode}`);
+    });
+    next();
+});
+
+app.use('/User', UserRoute);
+app.use('/Chat', ChatRoute);
 
 app.post('/ping', authenticator, (req: Request, res: Response) => {
-    res.send('pong')
-})
+    res.send('pong');
+});
 
-const PORT = process.env.PORT ?? 8013
+const PORT = process.env.PORT ?? 8013;
 
-const startServer = async ( ) => {
-    
-    // app.router.use((req, res, next) => {
-    //     Logging.info(`Incoming -> Method: [${req.method}] - Url: [${req.url}] - IP: [${req.socket.remoteAddress}]`)
-
-    //     res.on('finish', () => {
-    //         Logging.info(`Incoming -> Method: [${req.method}] - Url: [${req.url}] - IP: [${req.socket.remoteAddress}]  - Status: [${res.statusCode}]`)
-    //     });
-
-    //     next();
-    // });
-
+const startServer = async () => {
     try {
         await dbconnect();
     } catch (error) {
-        console.log(error)
+        Logging.error(error);
     } finally {
         app.listen(PORT, () => {
-            Logging.log(`Server is running on port ${PORT}`)
-        })
+            Logging.log(`Server is running on port ${PORT}`);
+        });
     }
-}
+};
 
-startServer()
+startServer();
